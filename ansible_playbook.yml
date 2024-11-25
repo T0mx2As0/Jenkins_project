@@ -1,0 +1,8 @@
+---
+
+- name: Main Playbook
+  gather_facts: false
+  hosts: all
+  become: true
+  roles:
+    - tools

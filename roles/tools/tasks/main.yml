@@ -1,0 +1,16 @@
+---
+- name: Install Podman
+  dnf:
+    name: "{{item}}"
+    state: present
+  with_items:
+      - podman
+      - net-tools
+      - telnet
+      
+- name: starts podman service and enables it 
+  service:
+    name: podman
+    state: started
+    enabled: true
+
