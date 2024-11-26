@@ -1,0 +1,5 @@
+.encoding = "UTF-8"
+cloneOf0 = "/Users/tommasotrivelli/.vagrant.d/boxes/almalinux-VAGRANTSLASH-9/9.4.20240805/arm64/vmware_desktop/almalinux-9.vmx"
+numCloneOf = "1"
+sentinel0 = "disk-cl1.vmdk"
+numSentinels = "1"

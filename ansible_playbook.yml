@@ -6,3 +6,4 @@
   become: true
   roles:
     - tools
+    - jen_master

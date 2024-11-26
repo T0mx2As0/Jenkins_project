@@ -1,0 +1,46 @@
+--- 
+- name: Create volumes where jenkins stores data
+  containers.podman.podman_volume:
+    name: jenkins_data
+    state: present
+
+- name: create dir to store certs
+  file:
+    path: "{{jenkins_cert}}"
+    state: directory
+    recurse: true
+    mode: '0755'
+
+## copia certificati
+- name: Copy certificates
+  copy:
+    src: "../file/"
+    dest: "{{jenkins_cert}}"
+    remote_src: false
+
+- name: Pull latest jenkins image
+  containers.podman.podman_image:
+    name: docker.io/jenkins/jenkins
+    state: present
+
+- name: Start jenkins container
+  containers.podman.podman_container:
+    name: jenkins_master
+    image: docker.io/jenkins/jenkins
+    state: started
+    restart_policy: always
+    volumes:
+      - "jenkins_data:/var/jenkins_home:z"
+      - "{{jenkins_cert}}/certificate.crt:/etc/ssl/certs/certificate.crt:z"
+      - "{{jenkins_cert}}/privateKey.key:/etc/ssl/private/privateKey.key:z"
+      - "{{jenkins_cert}}/certificate_new.p12:/etc/ssl/certs/certificate_new.p12:z"
+    network: podman_internal
+    ip: 192.168.100.2
+    ports:
+      - "8080:8080"
+      - "5000:5000"
+      - "8443:8443"
+    command:
+      --httpsPort=8443
+      --httpsKeyStore=/etc/ssl/certs/certificate_new.p12
+      --httpsKeyStorePassword=password
