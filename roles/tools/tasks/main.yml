@@ -1,24 +1,25 @@
 ---
 - name: Install Podman
   dnf:
-    name: "{{item}}"
-    state: present
+     name: "{{item}}"
+     state: present
   with_items:
-      - podman
-      - net-tools
-      - telnet
-      - tcpdump
-      
+       - podman
+       - net-tools
+       - telnet
+       - tcpdump
+       - curl
+       - java-17-openjdk
+
 - name: starts podman service and enables it 
   service:
-    name: podman
-    state: started
-    enabled: true
+     name: podman
+     state: started
+     enabled: true
 
 - name: Create Podman Network
   containers.podman.podman_network:
     name: podman_internal
-    #internal: true
     ip_range: 192.168.100.0/28
     subnet: 192.168.100.0/28
     gateway: 192.168.100.14

@@ -1,0 +1,8 @@
+## AUTH JENKINS
+
+token: 11166034d9860b515750268915adac4e40
+user_admin: admin
+url_jenkins: http://192.168.100.2:8080
+
+
+Hostname_Slave: agent1

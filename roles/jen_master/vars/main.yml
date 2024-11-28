@@ -1,3 +1,5 @@
 
 
 jenkins_cert: "/etc/jenkins/certs"
+
+jenkins_user_password: "password" # password dell'utente jenkins nel container jenkins_slave

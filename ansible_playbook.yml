@@ -5,5 +5,12 @@
   hosts: all
   become: true
   roles:
-    - tools
-    - jen_master
+
+    - role: tools
+      tags: tools
+
+    - role: jen_master
+      tags: jen_master
+
+    - role: jen_slave
+      tags: jen_slave

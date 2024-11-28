@@ -1,4 +1,7 @@
 --- 
+- name: Include variables
+  include_vars: "../../../inventory/vars.yml"
+
 - name: Create volumes where jenkins stores data
   containers.podman.podman_volume:
     name: jenkins_data
@@ -29,6 +32,8 @@
     image: docker.io/jenkins/jenkins
     state: started
     restart_policy: always
+    cap_add:
+      - NET_RAW
     volumes:
       - "jenkins_data:/var/jenkins_home:z"
       - "{{jenkins_cert}}/certificate.crt:/etc/ssl/certs/certificate.crt:z"
@@ -41,6 +46,42 @@
       - "5000:5000"
       - "8443:8443"
     command:
-      --httpsPort=8443
-      --httpsKeyStore=/etc/ssl/certs/certificate_new.p12
-      --httpsKeyStorePassword=password
+ #     --httpsPort=8443
+ #     --httpsKeyStore=/etc/ssl/certs/certificate_new.p12
+ #     --httpsKeyStorePassword=password
+
+
+- name: Take Pass
+  containers.podman.podman_container_exec:
+    name: jenkins_master
+    command: /bin/bash -c "cat /var/jenkins_home/secrets/initialAdminPassword"
+  register: pass_admin
+
+- name: debug
+  debug:
+    var: pass_admin 
+
+- name: Download cli.jar
+  get_url:
+    url: http://192.168.100.2:8080/jnlpJars/jenkins-cli.jar
+    dest: /home/vagrant/
+
+
+
+# - name: export token variable
+#   shell:
+#     cmd: export JENKINS_API_TOKEN="{{token}}"
+#   args:
+#     executable: /bin/bash
+
+# - name: export user variable
+#   shell:
+#     cmd: export JENKINS_USER_ID="{{user}}"
+#   args:  
+#       executable: /bin/bash
+
+# - name: export url jenkins variable
+#   shell:
+#     cmd: export JENKINS_URL="{{url_jenkins}}"
+#   args:
+#       executable: /bin/bash

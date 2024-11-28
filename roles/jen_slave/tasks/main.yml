@@ -1,0 +1,111 @@
+- name: Include variables
+  include_vars: "../../../inventory/vars.yml"
+
+- name: Pull jenkins slave image
+  containers.podman.podman_image:
+      name: docker.io/ubuntu:22.04
+      state: present
+
+- name: start jenkins slave container
+  containers.podman.podman_container:
+      name: jenkins_slave
+      image: docker.io/ubuntu:22.04
+      state: started
+      interactive: true
+      restart_policy: always
+      network: podman_internal
+      ip: 192.168.100.5
+      cap_add:
+       - NET_RAW
+
+- name: Install some packeges inside container
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c "apt update &> /dev/null && apt install openjdk-17-jdk curl -y  &> /dev/null"
+
+- name: Check if jenkins user already exist on container
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c "cat /etc/passwd | grep jenkins | cut -d ':' -f 1"
+  register: user
+
+- name: create user jenkins
+  when: user.stdout_lines == []
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c "useradd -m -s /bin/bash jenkins &> /dev/null"
+
+- name: set password for jenkins user
+  when: user.stdout_lines == []
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c "echo jenkins:{{jenkins_user_password}} | chpasswd"
+
+- name: Download jenkins slave packet
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c " curl --insecure -O http://192.168.100.2:8080/jnlpJars/agent.jar"
+    workdir: /home/jenkins
+
+- name: Change owner and group
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c "chown -R jenkins:jenkins /home/jenkins"
+
+- name: Take Pass
+  containers.podman.podman_container_exec:
+    name: jenkins_master
+    command: /bin/bash -c "cat /var/jenkins_home/secrets/initialAdminPassword"
+  register: pass_admin
+
+- name: debug
+  debug:
+    var: pass_admin
+
+- name: copy config.xml
+  copy:
+    src: ../file/config.xml
+    dest: /home/vagrant
+
+- name: Custom config.xml
+  shell:
+    cmd: sed -i 's/NodoTest/{{Hostname_Slave}}/g' /home/vagrant/config.xml
+
+- name: Download cli.jar
+  get_url:
+    url: http://192.168.100.2:8080/jnlpJars/jenkins-cli.jar
+    dest: /home/vagrant/
+
+- name: var
+  debug:
+    var: pass_admin.stdout_lines[0]
+
+- name: Add slave node
+  shell:
+    cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
+    chdir: /home/vagrant/
+
+
+
+
+
+
+
+
+# - name: secret
+#   containers.podman.podman_container_exec:
+#     name: jenkins_master
+#     command: /bin/bash -c "cat secret.key"
+#     workdir: /var/jenkins_home
+#   register: secret
+
+# - name: debug
+#   debug:
+#     var: secret.stdout_lines
+
+# - name: Start slave node
+#   containers.podman.podman_container_exec:
+#     name: jenkins_slave
+#     command: /bin/bash -c "java -jar agent.jar -url http://192.168.100.2:8080/ -secret {{secret.stdout_lines}} -name Slave1 -webSocket -workDir "/home/jenkins""
+#     workdir: /home/jenkins
+#     detach: true
