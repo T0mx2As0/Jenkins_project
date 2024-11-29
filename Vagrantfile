@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
     # ANSIBLE CONFIGURATION
     vm01.vm.provision "ansible" do |ansible|
       ansible.playbook = "ansible_playbook.yml"
-      #ansible.tags = "jen_slave"
+      ansible.tags = "jen_slave"
       #ansible.verbose = "vvv"
     end
   end

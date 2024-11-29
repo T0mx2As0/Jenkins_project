@@ -12,6 +12,7 @@
       image: docker.io/ubuntu:22.04
       state: started
       interactive: true
+      privileged: true 
       restart_policy: always
       network: podman_internal
       ip: 192.168.100.5
@@ -52,6 +53,10 @@
     name: jenkins_slave
     command: /bin/bash -c "chown -R jenkins:jenkins /home/jenkins"
 
+- name: Wait 10 seconds
+  ansible.builtin.pause:
+    seconds: 10
+
 - name: Take Pass
   containers.podman.podman_container_exec:
     name: jenkins_master
@@ -85,27 +90,20 @@
     cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
     chdir: /home/vagrant/
 
+- name: Get secret file
+  shell:
+    cmd: curl -u "{{user_admin}}":"{{pass_admin.stdout_lines[0]}}" -O "{{url_jenkins}}"/computer/"{{Hostname_Slave}}"/slave-agent.jnlp
+    chdir: /home/vagrant/
 
+- name: Get secret
+  shell:
+    cmd: grep -oP '(?<=<argument>)[a-f0-9]{64}(?=</argument>)' slave-agent.jnlp
+    chdir: /home/vagrant/
+  register: secret
 
-
-
-
-
-
-# - name: secret
-#   containers.podman.podman_container_exec:
-#     name: jenkins_master
-#     command: /bin/bash -c "cat secret.key"
-#     workdir: /var/jenkins_home
-#   register: secret
-
-# - name: debug
-#   debug:
-#     var: secret.stdout_lines
-
-# - name: Start slave node
-#   containers.podman.podman_container_exec:
-#     name: jenkins_slave
-#     command: /bin/bash -c "java -jar agent.jar -url http://192.168.100.2:8080/ -secret {{secret.stdout_lines}} -name Slave1 -webSocket -workDir "/home/jenkins""
-#     workdir: /home/jenkins
-#     detach: true
+- name: Start slave node
+  containers.podman.podman_container_exec:
+    name: jenkins_slave
+    command: /bin/bash -c "java -jar agent.jar -url {{url_jenkins}} -secret {{secret.stdout_lines[0]}} -name {{Hostname_Slave}} -webSocket -workDir "/home/jenkins""
+    workdir: /home/jenkins
+    detach: true
