@@ -40,7 +40,7 @@
       - "{{jenkins_cert}}/privateKey.key:/etc/ssl/private/privateKey.key:z"
       - "{{jenkins_cert}}/certificate_new.p12:/etc/ssl/certs/certificate_new.p12:z"
     network: podman_internal
-    ip: 192.168.100.2
+    ip: "{{IP_master}}"
     ports:
       - "8080:8080"
       - "5000:5000"
@@ -50,6 +50,9 @@
  #     --httpsKeyStore=/etc/ssl/certs/certificate_new.p12
  #     --httpsKeyStorePassword=password
 
+- name: Wait 10 seconds    # Migliorare mettendo un controllo sulla url
+  ansible.builtin.pause:
+    seconds: 10
 
 - name: Take Pass
   containers.podman.podman_container_exec:
@@ -63,7 +66,7 @@
 
 - name: Download cli.jar
   get_url:
-    url: http://192.168.100.2:8080/jnlpJars/jenkins-cli.jar
+    url: http://{{IP_master}}:8080/jnlpJars/jenkins-cli.jar # forse virgolette 
     dest: /home/vagrant/
 
 

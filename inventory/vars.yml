@@ -2,7 +2,11 @@
 
 token: 11166034d9860b515750268915adac4e40
 user_admin: admin
-url_jenkins: http://192.168.100.2:8080
+url_jenkins: http://{{IP_master}}:8080 # da mettere
 
+IP_master: 192.168.100.2
+IP_slave: 192.168.100.5
 
-Hostname_Slave: agent1
+Hostname_Slave: jenk_agent1
+
+jenkins_user_password: password
