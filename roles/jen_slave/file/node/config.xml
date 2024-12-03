@@ -2,7 +2,7 @@
     <name>NodoTest</name>
     <description>Automated node</description>
     <remoteFS>/home/jenkins</remoteFS>
-    <numExecutors>1</numExecutors>
+    <numExecutors>2</numExecutors>
     <mode>EXCLUSIVE</mode>
     <label>automation</label>
     <launcher class="hudson.slaves.JNLPLauncher"/>

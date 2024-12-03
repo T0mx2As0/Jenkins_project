@@ -7,8 +7,8 @@ Vagrant.configure("2") do |config|
 
   # VM RESOURCE CONFIGURATION
     vm01.vm.provider "vmware_fusion" do |vmf|
-      vmf.memory = 1024
-      vmf.cpus = 1
+      vmf.memory = 4096
+      vmf.cpus = 4
     end 
     # ANSIBLE CONFIGURATION
     vm01.vm.provision "ansible" do |ansible|

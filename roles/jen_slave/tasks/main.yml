@@ -24,7 +24,7 @@
 - name: Install some packeges inside container
   containers.podman.podman_container_exec:
     name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "apt update &> /dev/null && apt install openjdk-17-jdk vim curl docker.io -y  &> /dev/null"
+    command: /bin/bash -c "apt update &> /dev/null && apt install openjdk-17-jdk vim curl docker.io pip -y  &> /dev/null"
 
 - name: Check if jenkins user already exists on container
   containers.podman.podman_container_exec:
@@ -35,7 +35,7 @@
 - name: Check if jenkins user already exists on container
   containers.podman.podman_container_exec:
     name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "dockerd"
+    command: /bin/bash -c " DOCKER_BUILDKIT=1 dockerd"
     detach: true 
 
 - name: create user jenkins
@@ -61,6 +61,11 @@
     name: "{{Hostname_Slave}}"
     command: /bin/bash -c "chown -R jenkins:jenkins /home/jenkins"
 
+- name: Install the ansible library for jenkins 
+  containers.podman.podman_container_exec:
+    name: "{{Hostname_Slave}}"
+    command: /bin/bash -c "apt install python3-jenkins -y"
+
 - name: Wait 10 seconds
   ansible.builtin.pause:
     seconds: 5
@@ -73,7 +78,7 @@
 
 - name: copy config.xml
   copy:
-    src: ../file/config.xml
+    src: ../file/node/config.xml
     dest: /home/vagrant
 
 - name: Custom config.xml
@@ -87,8 +92,8 @@
 
 - name: Add slave node
   shell:
-    cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
-    chdir: /home/vagrant/
+     cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
+     chdir: /home/vagrant/
 
 - name: Get secret file
   shell:
@@ -107,3 +112,47 @@
     command: /bin/bash -c "java -jar agent.jar -url {{url_jenkins}} -secret {{secret.stdout_lines[0]}} -name {{Hostname_Slave}} -webSocket -workDir "/home/jenkins""
     workdir: /home/jenkins
     detach: true
+
+- name: Create a jenkins job using basic authentication
+  community.general.jenkins_job:
+    config: "{{ lookup('file', 'file/job/config.xml') }}"
+    name: flask-app-example-build_Ansible
+    password: "{{pass_admin.stdout_lines[0]}}"
+    user: admin
+    url: "{{url_jenkins}}"
+
+# - name: Download minikube
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/bash -c "curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_arm64.deb"
+#     workdir: /home/jenkins
+
+# - name: Install minikube
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/bash -c "dpkg -i minikube_latest_arm64.deb"
+#     workdir: /home/jenkins
+
+# - name: Start minikube
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/bash -c "minikube start --force"
+#     workdir: /home/jenkins
+
+# - name: Download helm script
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/bash -c "curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+#     workdir: /home/jenkins
+
+# - name: Install helm
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/bash -c "chmod 700 get_helm.sh"
+#     workdir: /home/jenkins
+
+# - name: Start helm
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/bash -c "./get_helm.sh"
+#     workdir: /home/jenkins

@@ -10,6 +10,11 @@
        - tcpdump
        - curl
        - java-17-openjdk
+       - pip
+
+- name: install library
+  pip:
+    name: python-jenkins
 
 - name: starts podman service and enables it 
   service:
