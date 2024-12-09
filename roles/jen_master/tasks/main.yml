@@ -68,23 +68,3 @@
   get_url:
     url: http://{{IP_master}}:8080/jnlpJars/jenkins-cli.jar # forse virgolette 
     dest: /home/vagrant/
-
-
-
-# - name: export token variable
-#   shell:
-#     cmd: export JENKINS_API_TOKEN="{{token}}"
-#   args:
-#     executable: /bin/bash
-
-# - name: export user variable
-#   shell:
-#     cmd: export JENKINS_USER_ID="{{user}}"
-#   args:  
-#       executable: /bin/bash
-
-# - name: export url jenkins variable
-#   shell:
-#     cmd: export JENKINS_URL="{{url_jenkins}}"
-#   args:
-#       executable: /bin/bash

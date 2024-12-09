@@ -3,13 +3,13 @@
 
 - name: Pull jenkins slave image
   containers.podman.podman_image:
-      name: docker.io/debian
+      name: docker.io/docker:dind
       state: present
 
 - name: start jenkins slave container #aggiungere hostname
   containers.podman.podman_container:
       name: "{{Hostname_Slave}}"
-      image: docker.io/debian
+      image: docker.io/docker:dind
       state: started
       interactive: true
       privileged: true 
@@ -18,57 +18,16 @@
       ip: "{{IP_slave}}"
       cap_add:
        - NET_RAW
-      env:
-        DOCKER_BUILDKIT: 1
 
 - name: Install some packeges inside container
   containers.podman.podman_container_exec:
     name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "apt update &> /dev/null && apt install openjdk-17-jdk vim curl docker.io pip -y  &> /dev/null"
-
-- name: Check if jenkins user already exists on container
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "cat /etc/passwd | grep jenkins | cut -d ':' -f 1"
-  register: user
-
-- name: Check if jenkins user already exists on container
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c " DOCKER_BUILDKIT=1 dockerd"
-    detach: true 
-
-- name: create user jenkins
-  when: user.stdout_lines == []
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "useradd -m -s /bin/bash jenkins &> /dev/null"
-
-- name: set password for jenkins user
-  when: user.stdout_lines == []
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "echo jenkins:{{jenkins_user_password}} | chpasswd"
+    command: /bin/sh -c "apk update &> /dev/null && apk add openjdk17 vim curl jq --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community  &> /dev/null"
 
 - name: Download jenkins slave packet
   containers.podman.podman_container_exec:
     name: "{{Hostname_Slave}}"
-    command: /bin/bash -c " curl --insecure -O "{{url_jenkins}}"/jnlpJars/agent.jar"
-    workdir: /home/jenkins
-
-- name: Change owner and group
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "chown -R jenkins:jenkins /home/jenkins"
-
-- name: Install the ansible library for jenkins 
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "apt install python3-jenkins -y"
-
-- name: Wait 10 seconds
-  ansible.builtin.pause:
-    seconds: 5
+    command: /bin/sh -c " curl --insecure -O "{{url_jenkins}}"/jnlpJars/agent.jar"
 
 - name: Take Pass
   containers.podman.podman_container_exec:
@@ -90,28 +49,34 @@
     url: "{{url_jenkins}}/jnlpJars/jenkins-cli.jar"
     dest: /home/vagrant/
 
-- name: Add slave node
-  shell:
-     cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
-     chdir: /home/vagrant/
+# - name: Add slave node
+#   shell:
+#        cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
+#        chdir: /home/vagrant/
 
-- name: Get secret file
-  shell:
-    cmd: curl -u "{{user_admin}}":"{{pass_admin.stdout_lines[0]}}" -O "{{url_jenkins}}"/computer/"{{Hostname_Slave}}"/slave-agent.jnlp
-    chdir: /home/vagrant/
+# - name: Get secret file
+#   shell:
+#     cmd: curl -u "{{user_admin}}":"{{pass_admin.stdout_lines[0]}}" -O "{{url_jenkins}}"/computer/"{{Hostname_Slave}}"/slave-agent.jnlp
+#     chdir: /home/vagrant/
 
-- name: Get secret
-  shell:
-    cmd: grep -oP '(?<=<argument>)[a-f0-9]{64}(?=</argument>)' slave-agent.jnlp
-    chdir: /home/vagrant/
-  register: secret
+# - name: Get secret
+#   shell:
+#     cmd: grep -oP '(?<=<argument>)[a-f0-9]{64}(?=</argument>)' slave-agent.jnlp
+#     chdir: /home/vagrant/
+#   register: secret
 
-- name: Start slave node
-  containers.podman.podman_container_exec:
-    name: "{{Hostname_Slave}}"
-    command: /bin/bash -c "java -jar agent.jar -url {{url_jenkins}} -secret {{secret.stdout_lines[0]}} -name {{Hostname_Slave}} -webSocket -workDir "/home/jenkins""
-    workdir: /home/jenkins
-    detach: true
+# - name: Start slave node
+#   containers.podman.podman_container_exec:
+#     name: "{{Hostname_Slave}}"
+#     command: /bin/sh -c "java -jar agent.jar -url {{url_jenkins}} -secret {{secret.stdout_lines[0]}} -name {{Hostname_Slave}} -webSocket"
+#     detach: true
+
+- name: Install plugin
+  jenkins_plugin:
+    name: docker-pipeline
+    url_username: "{{user_admin}}"
+    url_password: "{{pass_admin.stdout_lines[0]}}"
+    url: "{{url_jenkins}}"
 
 - name: Create a jenkins job using basic authentication
   community.general.jenkins_job:
@@ -121,38 +86,27 @@
     user: admin
     url: "{{url_jenkins}}"
 
-# - name: Download minikube
+# - name: Download Minikube
 #   containers.podman.podman_container_exec:
 #     name: "{{Hostname_Slave}}"
-#     command: /bin/bash -c "curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_arm64.deb"
-#     workdir: /home/jenkins
+#     command: /bin/sh -c "curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-arm64"
 
-# - name: Install minikube
+# - name: Install Minikube
 #   containers.podman.podman_container_exec:
 #     name: "{{Hostname_Slave}}"
-#     command: /bin/bash -c "dpkg -i minikube_latest_arm64.deb"
-#     workdir: /home/jenkins
+#     command: /bin/sh -c "install minikube-linux-arm64 /usr/local/bin/minikube && rm minikube-linux-arm64"
 
-# - name: Start minikube
+# - name: Install Minikube
 #   containers.podman.podman_container_exec:
 #     name: "{{Hostname_Slave}}"
-#     command: /bin/bash -c "minikube start --force"
-#     workdir: /home/jenkins
+#     command: /bin/sh -c "minikube start --force"
 
-# - name: Download helm script
+# - name: Download Helm
 #   containers.podman.podman_container_exec:
 #     name: "{{Hostname_Slave}}"
-#     command: /bin/bash -c "curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
-#     workdir: /home/jenkins
+#     command: /bin/sh -c "curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
 
-# - name: Install helm
+# - name: Install Helm
 #   containers.podman.podman_container_exec:
 #     name: "{{Hostname_Slave}}"
-#     command: /bin/bash -c "chmod 700 get_helm.sh"
-#     workdir: /home/jenkins
-
-# - name: Start helm
-#   containers.podman.podman_container_exec:
-#     name: "{{Hostname_Slave}}"
-#     command: /bin/bash -c "./get_helm.sh"
-#     workdir: /home/jenkins
+#     command: /bin/sh -c "chmod 700 get_helm.sh && sh get_helm.sh"
