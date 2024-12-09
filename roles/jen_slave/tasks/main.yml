@@ -49,27 +49,27 @@
     url: "{{url_jenkins}}/jnlpJars/jenkins-cli.jar"
     dest: /home/vagrant/
 
-# - name: Add slave node
-#   shell:
-#        cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
-#        chdir: /home/vagrant/
+- name: Add slave node
+  shell:
+       cmd: cat config.xml | java -jar jenkins-cli.jar -s {{url_jenkins}} -auth {{user_admin}}:{{pass_admin.stdout_lines[0]}} create-node {{Hostname_Slave}}
+       chdir: /home/vagrant/
 
-# - name: Get secret file
-#   shell:
-#     cmd: curl -u "{{user_admin}}":"{{pass_admin.stdout_lines[0]}}" -O "{{url_jenkins}}"/computer/"{{Hostname_Slave}}"/slave-agent.jnlp
-#     chdir: /home/vagrant/
+- name: Get secret file
+  shell:
+    cmd: curl -u "{{user_admin}}":"{{pass_admin.stdout_lines[0]}}" -O "{{url_jenkins}}"/computer/"{{Hostname_Slave}}"/slave-agent.jnlp
+    chdir: /home/vagrant/
 
-# - name: Get secret
-#   shell:
-#     cmd: grep -oP '(?<=<argument>)[a-f0-9]{64}(?=</argument>)' slave-agent.jnlp
-#     chdir: /home/vagrant/
-#   register: secret
+- name: Get secret
+  shell:
+    cmd: grep -oP '(?<=<argument>)[a-f0-9]{64}(?=</argument>)' slave-agent.jnlp
+    chdir: /home/vagrant/
+  register: secret
 
-# - name: Start slave node
-#   containers.podman.podman_container_exec:
-#     name: "{{Hostname_Slave}}"
-#     command: /bin/sh -c "java -jar agent.jar -url {{url_jenkins}} -secret {{secret.stdout_lines[0]}} -name {{Hostname_Slave}} -webSocket"
-#     detach: true
+- name: Start slave node
+  containers.podman.podman_container_exec:
+    name: "{{Hostname_Slave}}"
+    command: /bin/sh -c "java -jar agent.jar -url {{url_jenkins}} -secret {{secret.stdout_lines[0]}} -name {{Hostname_Slave}} -webSocket"
+    detach: true
 
 - name: Install plugin
   jenkins_plugin:
