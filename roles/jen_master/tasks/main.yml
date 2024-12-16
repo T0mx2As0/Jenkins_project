@@ -30,6 +30,7 @@
   containers.podman.podman_container:
     name: jenkins_master
     image: docker.io/jenkins/jenkins
+    privileged: true 
     state: started
     restart_policy: always
     cap_add:
